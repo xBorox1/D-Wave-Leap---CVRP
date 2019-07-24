@@ -1,9 +1,10 @@
 from qubo_helper import Qubo
-from itertools import combinations
+from itertools import combinations, product
 
 # VRP problem with multi-source
 # Attributes : sources list, costs dict/matrix, capacities matrix, destinations list, weights of orders
 class VRPProblem:
+
     def __init__(self, sources, costs, capacities, dests, weights):
         # Merging all sources into one source.
         source = 0 # TODO : source id
@@ -96,6 +97,45 @@ class VRPProblem:
 
         return vrp_qubo
 
+    # All vehicles have limit of orders.
+    def get_qubo_with_limits(self, vehicles_limits, only_one_const, order_const, capacity_const):
+        steps = 0
+        for limit in vehicles_limits:
+            steps += limit
+        dests_num = len(self.dests)
+
+        fake_const = len(self.weights)
+        fake_dests_range = range(fake_const, fake_const + steps - dests_num)
+
+        # Adding fake orders
+        for fake_dest in fake_dests_range:
+            self.costs[fake_dest] = dict()
+            for dest in self.dests:
+                self.costs[dest][fake_dest] = 0
+                self.costs[fake_dest][dest] = only_one_const
+            self.costs[self.source][fake_dest] = 0
+            self.costs[fake_dest][self.source] = only_one_const
+        for fake_dest in fake_dests_range:
+            self.dests.append(fake_dest)
+            self.weights.append(0)
+        for (d1, d2) in product(fake_dests_range, fake_dests_range):
+            self.costs[d1][d2] = only_one_const
+
+        vrp_qubo = self.get_qubo_with_partition(vehicles_limits, only_one_const, order_const, capacity_const)
+
+        # Removing fake orders.
+        for fake_dest in fake_dests_range:
+            del self.costs[fake_dest]
+            #for dest in self.dests:
+            #    del self.costs[dest][fake_dest]
+            #del self.costs[self.source][fake_dest]
+            #del self.costs[fake_dest][self.source]
+        for fake_dest in fake_dests_range:
+            self.dests.pop()
+            self.weights.pop()
+
+        return vrp_qubo
+
     # Returns list of lists of destinations.
     # Doesn't include magazines.
     def decode_answer_with_partition(self, sample, vehicles_partition):
@@ -114,6 +154,27 @@ class VRPProblem:
                     vehicle += 1
                     vehicle_result = list()
                     if len(vehicles_partition) <= vehicle:
+                        return result
+
+        return result
+
+    def decode_answer_with_limits(self, sample, vehicles_limits):
+        result = list()
+        vehicle_result = list()
+        step = 0
+        vehicle = 0
+
+        for (s, dest) in sample:
+            if sample[(s, dest)] == 1:
+                if dest < len(self.weights):
+                    vehicle_result.append(dest)
+                step += 1
+                if vehicles_limits[vehicle] == step:
+                    result.append(vehicle_result)
+                    step = 0
+                    vehicle += 1
+                    vehicle_result = list()
+                    if len(vehicles_limits) <= vehicle:
                         return result
 
         return result
