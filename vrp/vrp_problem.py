@@ -5,6 +5,7 @@ from itertools import combinations, product
 # Attributes : sources list, costs dict/matrix, capacities matrix, destinations list, weights of orders
 class VRPProblem:
 
+    # TODO : time windows
     def __init__(self, sources, costs, capacities, dests, weights):
         # Merging all sources into one source.
         source = 0 # TODO : source id
@@ -126,6 +127,7 @@ class VRPProblem:
         # Removing fake orders.
         for fake_dest in fake_dests_range:
             del self.costs[fake_dest]
+            # TODO : Establish types and do removing fake destinations.
             #for dest in self.dests:
             #    del self.costs[dest][fake_dest]
             #del self.costs[self.source][fake_dest]
