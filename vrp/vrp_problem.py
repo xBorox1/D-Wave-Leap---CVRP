@@ -8,9 +8,10 @@ class VRPProblem:
     # TODO : time windows
     def __init__(self, sources, costs, capacities, dests, weights):
         # Merging all sources into one source.
-        source = 0 # TODO : source id
+        source = 0
+        weights[source] = 0
         self.source = source
-        in_nearest_sources = dict() # TODO : types of arguments
+        in_nearest_sources = dict()
         out_nearest_sources = dict()
 
         # Finding nearest source for all destinations
@@ -26,6 +27,7 @@ class VRPProblem:
             costs[dest][source] = costs[dest][out_nearest]
             in_nearest_sources[dest] = in_nearest
             out_nearest_sources[dest] = out_nearest
+        costs[source][source] = 0
 
         self.costs = costs
         self.capacities = capacities
@@ -33,6 +35,20 @@ class VRPProblem:
         self.weights = weights
         self.in_nearest_sources = in_nearest_sources
         self.out_nearest_sources = out_nearest_sources
+
+    def get_order_qubo(self, start_step, final_step):
+        dests = self.dests
+        costs = self.costs
+        ord_qubo = Qubo()
+
+        for step in range(start_step, final_step):
+            for dest1 in dests:
+                for dest2 in dests:
+                    cost = costs[dest1][dest2]
+                    index = ((step, dest1), (step + 1, dest2))
+                    ord_qubo.add(index, cost * order_const)
+
+        return ord_qubo
 
     def get_capacity_qubo(self, capacity, start_step, final_step):
         dests = self.dests
@@ -47,13 +63,35 @@ class VRPProblem:
 
         return cap_qubo
 
+    def get_order_qubo(self, start_step, final_step, dests):
+        costs = self.costs
+        source = self.source
+        ord_qubo = Qubo()
+
+        # Order constraint
+        for step in range(start_step, final_step):
+            for dest1 in dests:
+                for dest2 in dests:
+                    cost = costs[dest1][dest2]
+                    index = ((step, dest1), (step + 1, dest2))
+                    ord_qubo.add(index, cost)
+
+        # First and last vertices
+        for dest in dests:
+            in_index = ((start_step, dest), (start_step, dest))
+            out_index = ((final_step, dest), (final_step, dest))
+            in_cost = costs[source][dest]
+            out_cost = costs[dest][source]
+            ord_qubo.add(in_index, in_cost)
+            ord_qubo.add(out_index, out_cost)
+
+        return ord_qubo
+
     # All vehicles have number od destinations.
     def get_qubo_with_partition(self, vehicles_partition, only_one_const, order_const, capacity_const):
-        source = self.source
         costs = self.costs
         capacities = self.capacities
         dests = self.dests    
-        weights = self.weights
         steps = len(dests)
 
         vrp_qubo = Qubo()
@@ -71,22 +109,8 @@ class VRPProblem:
             size = vehicles_partition[vehicle]
             final = start + size - 1
 
-            # Order constraint
-            for step in range(start, final):
-                for dest1 in dests:
-                    for dest2 in dests:
-                        cost = costs[dest1][dest2]
-                        index = ((step, dest1), (step + 1, dest2))
-                        vrp_qubo.add(index, cost * order_const)
-
-            # First and last vertices
-            for dest in dests:
-                in_index = ((start, dest), (start, dest))
-                out_index = ((final, dest), (final, dest))
-                in_cost = costs[source][dest]
-                out_cost = costs[dest][source]
-                vrp_qubo.add(in_index, in_cost * order_const)
-                vrp_qubo.add(out_index, out_cost * order_const)
+            ord_qubo = self.get_order_qubo(start, final, dests)
+            vrp_qubo.merge_with(ord_qubo, 1., order_const)
 
             # Capacity constraints
             if capacity_const != 0:
@@ -99,42 +123,43 @@ class VRPProblem:
         return vrp_qubo
 
     # All vehicles have limit of orders.
+    # To do that we have more steps and vehicles can 'wait' in source.
     def get_qubo_with_limits(self, vehicles_limits, only_one_const, order_const, capacity_const):
         steps = 0
         for limit in vehicles_limits:
             steps += limit
         dests_num = len(self.dests)
 
-        fake_const = len(self.weights)
-        fake_dests_range = range(fake_const, fake_const + steps - dests_num)
+        capacities = self.capacities
+        dests = self.dests
+        source = self.source
+        dests_with_source = dests.copy()
+        dests_with_source.append(source)
+        vrp_qubo = Qubo()
 
-        # Adding fake orders
-        for fake_dest in fake_dests_range:
-            self.costs[fake_dest] = dict()
-            for dest in self.dests:
-                self.costs[dest][fake_dest] = 0
-                self.costs[fake_dest][dest] = only_one_const
-            self.costs[self.source][fake_dest] = 0
-            self.costs[fake_dest][self.source] = only_one_const
-        for fake_dest in fake_dests_range:
-            self.dests.append(fake_dest)
-            self.weights.append(0)
-        for (d1, d2) in product(fake_dests_range, fake_dests_range):
-            self.costs[d1][d2] = only_one_const
+        # Only one destination for one step.
+        for step in range(steps):
+            vrp_qubo.add_only_one_constraint([(step, dest) for dest in dests_with_source], only_one_const)
 
-        vrp_qubo = self.get_qubo_with_partition(vehicles_limits, only_one_const, order_const, capacity_const)
+        # Only one step for one destination.
+        for dest in self.dests:
+            vrp_qubo.add_only_one_constraint([(step, dest) for step in range(steps)], only_one_const) 
 
-        # Removing fake orders.
-        for fake_dest in fake_dests_range:
-            del self.costs[fake_dest]
-            # TODO : Establish types and do removing fake destinations.
-            #for dest in self.dests:
-            #    del self.costs[dest][fake_dest]
-            #del self.costs[self.source][fake_dest]
-            #del self.costs[fake_dest][self.source]
-        for fake_dest in fake_dests_range:
-            self.dests.pop()
-            self.weights.pop()
+        start = 0
+        for vehicle in range(len(vehicles_limits)):
+            size = vehicles_limits[vehicle]
+            final = start + size - 1
+
+            ord_qubo = self.get_order_qubo(start, final, dests_with_source)
+            vrp_qubo.merge_with(ord_qubo, 1., order_const)
+
+            # Capacity constraints
+            if capacity_const != 0:
+                capacity = capacities[vehicle]
+                cap_qubo = self.get_capacity_qubo(capacity, start, final)
+                vrp_qubo.merge_with(cap_qubo, 1., capacity_const)
+
+            start = final + 1
 
         return vrp_qubo
 
@@ -168,7 +193,7 @@ class VRPProblem:
 
         for (s, dest) in sample:
             if sample[(s, dest)] == 1:
-                if dest < len(self.weights):
+                if dest != 0:
                     vehicle_result.append(dest)
                 step += 1
                 if vehicles_limits[vehicle] == step:

@@ -1,7 +1,11 @@
 from dwave.system.samplers import DWaveSampler
 from dwave.system.composites import EmbeddingComposite
 from dwave_qbsolv import QBSolv
+from hybrid.reference.kerberos import KerberosSampler
+from dimod.reference.samplers import ExactSolver
 import hybrid
+import dimod
+import neal
 
 # Creates hybrid solver.
 def hybrid_solver():
@@ -13,13 +17,23 @@ def hybrid_solver():
         | hybrid.SplatComposer()) | hybrid.ArgMin(), convergence=3)
     return hybrid.HybridSampler(workflow)
 
-# Solves qubo on cpu.
-def solve_qubo_on_cpu(qubo, limit = 1, num_repeats = 50):
-    response = QBSolv().sample_qubo(qubo.dict, num_repeats = num_repeats)
-    return list(response.samples())[:limit]
+def get_solver(solver_type):
+    solver = None
+    if solver_type == 'exact':
+        solver = ExactSolver()
+    if solver_type == 'standard':
+        solver = EmbeddingComposite(DWaveSolver())
+    if solver_type == 'hybrid':
+        solver = hybrid_solver()
+    if solver_type == 'kerberos':
+        solver = KerberosSampler()
+    if solver_type == 'qbsolv':
+        solver = QBSolv()
+    return solver
 
 # Solves qubo on qpu.
-def solve_qubo_on_qpu(qubo, limit = 1):
-    result = hybrid_solver().sample_qubo(qubo.dict)
-    return list(result)[:limit]
+def solve_qubo(qubo, solver_type = 'qbsolv', limit = 1, num_repeats = 50):
+    sampler = get_solver(solver_type)
+    response = sampler.sample_qubo(qubo.dict, num_repeats = num_repeats)
+    return list(response)[:limit]
     

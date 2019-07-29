@@ -28,4 +28,4 @@ if __name__ == '__main__':
 
     problem = VRPProblem(sources, paths, capacities, dests, weights)
     solver = FullQuboSolver(problem)
-    print(solver.solve(only_one_const, order_const, capacity_const))
+    print(solver.solve(only_one_const, order_const, capacity_const, solver_type = 'qbsolv', num_repeats = 100))
