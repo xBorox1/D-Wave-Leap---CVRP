@@ -2,11 +2,10 @@ from qubo_helper import Qubo
 from itertools import combinations, product
 
 # VRP problem with multi-source
-# Attributes : sources list, costs dict/matrix, capacities matrix, destinations list, weights of orders
 class VRPProblem:
 
     # TODO : time windows
-    def __init__(self, sources, costs, capacities, dests, weights):
+    def __init__(self, sources, costs, time_costs, capacities, dests, weights):
         # Merging all sources into one source.
         source = 0
         weights[source] = 0
@@ -19,17 +18,22 @@ class VRPProblem:
             in_nearest = sources[0]
             out_nearest = sources[0]
             for s in sources:
+                costs[source][s] = 0
+                costs[s][source] = 0
                 if costs[s][dest] < costs[in_nearest][dest]:
                     in_nearest = s
                 if costs[dest][s] < costs[dest][out_nearest]:
                     out_nearest = s
             costs[source][dest] = costs[in_nearest][dest]
             costs[dest][source] = costs[dest][out_nearest]
+            time_costs[source][dest] = costs[in_nearest][dest]
+            time_costs[dest][source] = costs[dest][out_nearest]
             in_nearest_sources[dest] = in_nearest
             out_nearest_sources[dest] = out_nearest
-        costs[source][source] = 0
+        time_costs[source][source] = 0
 
         self.costs = costs
+        self.time_costs = time_costs
         self.capacities = capacities
         self.dests = dests
         self.weights = weights
@@ -162,96 +166,3 @@ class VRPProblem:
             start = final + 1
 
         return vrp_qubo
-
-    # Returns list of lists of destinations.
-    # Doesn't include magazines.
-    def decode_answer_with_partition(self, sample, vehicles_partition):
-        result = list()
-        vehicle_result = list()
-        step = 0
-        vehicle = 0
-
-        for (s, dest) in sample:
-            if sample[(s, dest)] == 1:
-                vehicle_result.append(dest)
-                step += 1
-                if vehicles_partition[vehicle] == step:
-                    result.append(vehicle_result)
-                    step = 0
-                    vehicle += 1
-                    vehicle_result = list()
-                    if len(vehicles_partition) <= vehicle:
-                        return result
-
-        return result
-
-    def decode_answer_with_limits(self, sample, vehicles_limits):
-        result = list()
-        vehicle_result = list()
-        step = 0
-        vehicle = 0
-
-        for (s, dest) in sample:
-            if sample[(s, dest)] == 1:
-                if dest != 0:
-                    vehicle_result.append(dest)
-                step += 1
-                if vehicles_limits[vehicle] == step:
-                    result.append(vehicle_result)
-                    step = 0
-                    vehicle += 1
-                    vehicle_result = list()
-                    if len(vehicles_limits) <= vehicle:
-                        return result
-
-        return result
-
-    # Checks capacity and visiting.
-    def check_answer(self, answer):
-        capacities = self.capacities
-        weights = self.weights
-        vehicle_num = 0
-
-        for vehicle_dests in answer:
-            cap = self.capacities[vehicle_num]
-            for dest in vehicle_dests:
-                cap -= weights[dest]
-            if cap < 0: 
-                return False
-
-        dests = self.dests
-        answer_dests = [dest for vehicle_dests in answer for dest in vehicle_dests]
-        if len(dests) != len(answer_dests):
-            return False
-
-        lists_cmp = set(dests) & set(answer_dests)
-        if lists_cmp == len(dests):
-            return False
-
-        return True
-
-    def answer_cost(self, answer):
-        costs = self.costs
-        source = self.source
-        cost = 0
-
-        for vehicle_dests in answer:
-            prev = source
-            for dest in vehicle_dests:
-                cost += costs[prev][dest]
-                prev = dest
-            cost += costs[prev][source]
-
-        return cost
-
-    # Returns answer with magazines.
-    def get_full_answer(self, answer):
-        result = list()
-        for vehicle_dests in answer:
-            l = vehicle_dests.copy()
-            if len(l) != 0:
-                l.insert(0, self.in_nearest_sources[l[0]])
-                l.append(self.out_nearest_sources[l[len(l) - 1]])
-            result.append(l)
-        return result
-

@@ -9,20 +9,18 @@ import neal
 
 # Creates hybrid solver.
 def hybrid_solver():
-    workflow = hybrid.Loop(
+    workflow = hybrid.LoopUntilNoImprovement(
         hybrid.RacingBranches(
         hybrid.InterruptableTabuSampler(),
-        hybrid.EnergyImpactDecomposer(size=30, rolling=True, rolling_history=0.75)
+        hybrid.EnergyImpactDecomposer(size=20)
         | hybrid.QPUSubproblemAutoEmbeddingSampler()
         | hybrid.SplatComposer()) | hybrid.ArgMin(), convergence=3)
     return hybrid.HybridSampler(workflow)
 
 def get_solver(solver_type):
     solver = None
-    if solver_type == 'exact':
-        solver = ExactSolver()
     if solver_type == 'standard':
-        solver = EmbeddingComposite(DWaveSolver())
+        solver = EmbeddingComposite(DWaveSampler())
     if solver_type == 'hybrid':
         solver = hybrid_solver()
     if solver_type == 'kerberos':
@@ -32,8 +30,17 @@ def get_solver(solver_type):
     return solver
 
 # Solves qubo on qpu.
-def solve_qubo(qubo, solver_type = 'qbsolv', limit = 1, num_repeats = 50):
+def solve_qubo(qubo, solver_type = 'qbsolv', limit = 1, num_reads = 50):
     sampler = get_solver(solver_type)
-    response = sampler.sample_qubo(qubo.dict, num_repeats = num_repeats)
+
+    response = None
+    if solver_type == 'hybrid':
+        response = sampler.sample_qubo(qubo.dict)
+    elif solver_type == 'qbsolv':
+        response = sampler.sample_qubo(qubo.dict, num_reads = num_reads)
+    elif solver_type == 'standard':
+        response = sampler.sample_qubo(qubo.dict, chain_strength = 800, num_reads = num_reads)
+    else:
+        response = sampler.sample_qubo(qubo.dict, num_reads = num_reads)
     return list(response)[:limit]
     
