@@ -155,7 +155,7 @@ class VRPProblem:
                 vrp_qubo.merge_with(ord_max_qubo, 1., order_const)
 
             # From min_final step to min_final + 1 step
-            if min_final != max_final:
+            if min_size != 0 and min_size != max_size:
                 for dest1 in dests:
                     for dest2 in dests_with_source:
                         cost = costs[dest1][dest2]

@@ -16,21 +16,20 @@ if __name__ == '__main__':
             paths[i][j] = len(paths[i][j]) - 1
 
     # Problem parameters
-    sources = [5, 15]
+    sources = [0, 4]
     #sources = [0, 3, 15, 50, 77, 38, 89]
     costs = paths
     time_costs = costs
     #capacities = [n, n, n, n, n, n, n, n, n, n]
-    capacities = [n, n, n]
+    capacities = [2, 2]
     #dests = [1, 2, 16, 19, 8, 25, 55, 33, 31, 88, 97, 24, 10, 61, 48, 11, 92, 54, 38, 65]
-    dests = [1, 4, 6, 9, 11, 14, 19]
+    dests = [1, 2, 3]
     weights = [1 for _ in range(0, n)]
 
     time_windows = dict()
-    time_windows[19] = 5
-    time_windows[11] = 5
-    time_windows[16] = 15
-    time_windows[1] = 20
+    time_windows[1] = 5
+    time_windows[2] = 10
+    time_windows[3] = 5
 
     #limits = [5]
     only_one_const = 100.
