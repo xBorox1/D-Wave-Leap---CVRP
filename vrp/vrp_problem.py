@@ -4,7 +4,7 @@ from itertools import combinations, product
 # VRP problem with multi-source
 class VRPProblem:
 
-    TIME_WINDOW_RADIUS = 60
+    TIME_WINDOW_RADIUS = 5
 
     # TODO : time windows
     def __init__(self, sources, costs, time_costs, capacities, dests, weights, time_windows):
@@ -65,7 +65,7 @@ class VRPProblem:
             for (s1, s2) in combinations(range(start_step, final_step + 1), 2):
                 index = ((s1, d1), (s2, d2))
 
-                time_diff = time_windows[d1] - time_windows[d2]
+                time_diff = time_windows[d1] - time_windows[d2] + 1
                 step_diff = s2 - s1
                 cost = float(time_diff) / float(step_diff)
                 if time_diff < 0:
@@ -88,16 +88,31 @@ class VRPProblem:
                     index = ((step, dest1), (step + 1, dest2))
                     ord_qubo.add(index, cost)
 
-        # First and last vertices
+        return ord_qubo
+
+    def get_first_dest_qubo(self, start_step, dests):
+        costs = self.costs
+        source = self.source
+        fir_qubo = Qubo()
+
         for dest in dests:
             in_index = ((start_step, dest), (start_step, dest))
-            out_index = ((final_step, dest), (final_step, dest))
             in_cost = costs[source][dest]
-            out_cost = costs[dest][source]
-            ord_qubo.add(in_index, in_cost)
-            ord_qubo.add(out_index, out_cost)
+            fir_qubo.add(in_index, in_cost)
 
-        return ord_qubo
+        return fir_qubo
+
+    def get_last_dest_qubo(self, start_step, dests):
+        costs = self.costs
+        source = self.source
+        las_qubo = Qubo()
+
+        for dest in dests:
+            out_index = ((final_step, dest), (final_step, dest))
+            out_cost = costs[dest][source]
+            las_qubo.add(out_index, out_cost)
+
+        return las_qubo
 
     # All vehicles have number od destinations.
     def get_qubo_with_partition(self, vehicle_partitions,
@@ -154,7 +169,7 @@ class VRPProblem:
                 ord_max_qubo = self.get_order_qubo(min_final + 1, max_final, dests_with_source)
                 vrp_qubo.merge_with(ord_max_qubo, 1., order_const)
 
-            # From min_final step to min_final + 1 step
+            # From min_final step to min_final + 1 step.
             if min_size != 0 and min_size != max_size:
                 for dest1 in dests:
                     for dest2 in dests_with_source:
@@ -162,12 +177,19 @@ class VRPProblem:
                         index = ((min_final, dest1), (min_final + 1, dest2))
                         vrp_qubo.add(index, cost * order_const)
 
-            # Capacity constraints
+            # First and last destinations.
+            fir_qubo = self.get_first_dest_qubo(start, dests_with_source)
+            las_qubo = self.get_first_dest_qubo(max_final, dests_with_source)
+            vrp_qubo.merge_with(fir_qubo, 1., order_const)
+            vrp_qubo.merge_with(las_qubo, 1., order_const)
+
+            # Capacity constraints.
             if capacity_const != 0:
                 capacity = capacities[vehicle]
                 cap_qubo = self.get_capacity_qubo(capacity, start, max_final)
                 vrp_qubo.merge_with(cap_qubo, 1., capacity_const)
 
+            # Time constraints.
             if time_const != 0:
                 tim_qubo = self.get_time_qubo(start, max_final)
                 vrp_qubo.merge_with(tim_qubo, 1., time_const)
