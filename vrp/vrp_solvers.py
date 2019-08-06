@@ -5,6 +5,7 @@ from vrp_solution import VRPSolution
 import DWaveSolvers
 import networkx as nx
 
+# Attributes : VRPProblem
 class VRPSolver:
     def __init__(self, problem):
         self.problem = problem
@@ -13,7 +14,6 @@ class VRPSolver:
             solver_type = 'qbsolv', num_reads = 50):
         pass
 
-# Attributes : VRPProblem
 class FullQuboSolver(VRPSolver):
     def solve(self, only_one_const, order_const, capacity_const, time_const,
             solver_type = 'qbsolv', num_reads = 50):
@@ -21,6 +21,7 @@ class FullQuboSolver(VRPSolver):
         vehicles = len(self.problem.capacities)
 
         limits = [dests for _ in range(vehicles)]
+
         vrp_qubo = self.problem.get_qubo_with_limits(limits, only_one_const, order_const, capacity_const, time_const)
         samples = DWaveSolvers.solve_qubo(vrp_qubo, solver_type = solver_type, num_reads = num_reads)
         sample = samples[0]

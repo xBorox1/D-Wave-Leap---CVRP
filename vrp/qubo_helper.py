@@ -23,6 +23,12 @@ class Qubo:
             self.dict[field] += const
         #self.satisfied_energy -= const
 
+    def add_and_gate(self, x, y, z, const):
+        self.add((x, y), const)
+        self.add((x, z), (-2) * const)
+        self.add((y, z), (-2) * const)
+        self.add((z, z), 3 * const)
+
     def add(self, field, value):
         self.create_not_exist_field(field)
         self.dict[field] += value
