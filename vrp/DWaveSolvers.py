@@ -39,7 +39,7 @@ def solve_qubo(qubo, solver_type = 'qbsolv', limit = 1, num_reads = 50):
     elif solver_type == 'qbsolv':
         response = sampler.sample_qubo(qubo.dict, num_reads = num_reads)
     elif solver_type == 'standard':
-        response = sampler.sample_qubo(qubo.dict, chain_strength = 800, num_reads = num_reads)
+        response = QBSolv().sample_qubo(qubo.dict, solver = sampler, chain_strength = 800, num_reads = num_reads)
     else:
         response = sampler.sample_qubo(qubo.dict, num_reads = num_reads)
     return list(response)[:limit]

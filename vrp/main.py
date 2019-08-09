@@ -32,7 +32,7 @@ if __name__ == '__main__':
     costs = paths
     time_costs = costs
     #capacities = [n, n, n, n, n, n, n, n, n, n]
-    capacities = [n, n, n]
+    capacities = [n, n]
     #dests = [1, 2, 16, 19, 8, 25, 55, 33, 31, 88, 97, 24, 10, 61, 48, 11, 92, 54, 38, 65]
     dests = [1, 2, 4, 8, 12, 14, 16, 19]
     weights = [1 for _ in range(0, n)]
@@ -57,7 +57,7 @@ if __name__ == '__main__':
     vrp_solver = AveragePartitionSolver(None)
 
     print(solver.solve(only_one_const, order_const, capacity_const,
-            vrp_solver, solver_type = 'qbsolv', num_reads = 100))
+            vrp_solver, solver_type = 'standard', num_reads = 50))
 
     """solver = FullQuboSolver(problem)
     #solver = AveragePartitionSolver(problem)

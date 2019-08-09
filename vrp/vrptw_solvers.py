@@ -185,7 +185,7 @@ class MergingTimeWindowsVRPTWSolver(VRPTWSolver):
                     last_source = last_source)
             vrp_solver.set_problem(vrp_problem)
             next_solution = vrp_solver.solve(only_one_const, order_const, capacity_const,
-                        solver_type = 'qbsolv', num_reads = 50).solution
+                        solver_type = solver_type, num_reads = num_reads).solution
             solution = self._merge_all(solution, next_solution, time - self.TIME_WINDOW_RADIUS)
 
         return solution
