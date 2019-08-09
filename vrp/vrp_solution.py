@@ -1,33 +1,38 @@
 class VRPSolution:
-    def __init__(self, problem, sample, vehicle_limits):
+    def __init__(self, problem, sample, vehicle_limits, solution = None):
         self.problem = problem
         
-        result = list()
-        vehicle_result = list()
-        step = 0
-        vehicle = 0
+        if solution != None:
+            self.solution = solution
+        else:
+            result = list()
+            vehicle_result = list()
+            step = 0
+            vehicle = 0
 
-        # Decoding solution from qubo sample
-        for (s, dest) in sample:
-            if sample[(s, dest)] == 1:
-                if dest != 0:
-                    vehicle_result.append(dest)
-                step += 1
-                if vehicle_limits[vehicle] == step:
-                    result.append(vehicle_result)
-                    step = 0
-                    vehicle += 1
-                    vehicle_result = list()
-                    if len(vehicle_limits) <= vehicle:
-                        break
+            # Decoding solution from qubo sample
+            for (s, dest) in sample:
+                if sample[(s, dest)] == 1:
+                    if dest != 0:
+                        vehicle_result.append(dest)
+                    step += 1
+                    if vehicle_limits[vehicle] == step:
+                        result.append(vehicle_result)
+                        step = 0
+                        vehicle += 1
+                        vehicle_result = list()
+                        if len(vehicle_limits) <= vehicle:
+                            break
 
-        # Adding first and last magazine.
-        for l in result:
-            if len(l) != 0:
-                l.insert(0, problem.in_nearest_sources[l[0]])
-                l.append(problem.out_nearest_sources[l[len(l) - 1]])
+            # Adding first and last magazine.
+            for l in result:
+                if len(l) != 0:
+                    if problem.first_source:
+                        l.insert(0, problem.in_nearest_sources[l[0]])
+                    if problem.last_source:
+                        l.append(problem.out_nearest_sources[l[len(l) - 1]])
 
-        self.solution = result
+            self.solution = result
 
     # Checks capacity and visiting.
     def check(self):
