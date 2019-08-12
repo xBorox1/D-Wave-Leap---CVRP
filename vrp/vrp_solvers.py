@@ -39,7 +39,7 @@ class AveragePartitionSolver(VRPSolver):
 
         avg = int(dests / vehicles)
 
-        limits = [(avg - limit_radius, avg + limit_radius) for _ in range(vehicles)]
+        limits = [(max(avg - limit_radius, 0), avg + limit_radius) for _ in range(vehicles)]
         max_limits = [r for (_, r) in limits]
 
         vrp_qubo = self.problem.get_qubo_with_both_limits(limits,

@@ -10,9 +10,9 @@ import numpy as np
 # Attributes : VRPProblem
 class VRPTWSolver:
 
-    TIME_WINDOW_RADIUS = 10
-    TIME_BLOCK = 10
-    TIME_WINDOWS_DIFF = 5
+    TIME_WINDOW_RADIUS = 60
+    TIME_BLOCK = 30
+    TIME_WINDOWS_DIFF = 30
 
     def __init__(self, problem):
         self.problem = problem
@@ -169,11 +169,11 @@ class MergingTimeWindowsVRPTWSolver(VRPTWSolver):
             time = time_windows[dest]
             min_time = min(time, min_time)
             max_time = max(time, max_time)
-
         for time in range(min_time, max_time + 1, self.TIME_WINDOWS_DIFF):
             dests_blocks[time] = list()
 
         for dest in dests:
+            time = time_windows[dest]
             dests_blocks[time].append(dest)
 
         solution = None

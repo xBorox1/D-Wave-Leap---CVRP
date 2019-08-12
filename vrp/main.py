@@ -14,14 +14,14 @@ CAPACITY = 1000
 
 if __name__ == '__main__':
 
-    TEST = '../quantum1/quantum1-1.test'
+    TEST = '../quantum1/quantum1-4.test'
     test = read_test(TEST) 
 
     # Problem parameters
     sources = test['sources']
     costs = test['costs']
     time_costs = test['time_costs']
-    capacities = [CAPACITY]
+    capacities = [CAPACITY, CAPACITY]
     dests = test['dests']
     weigths = test['weights']
     time_windows = test['time_windows']
@@ -31,19 +31,19 @@ if __name__ == '__main__':
     capacity_const = 0.
     time_const = 0.
 
-    """problem = VRPTWProblem(sources, costs, time_costs, capacities, dests, weights, time_windows)
+    problem = VRPTWProblem(sources, costs, time_costs, capacities, dests, weigths, time_windows)
     solver = MergingTimeWindowsVRPTWSolver(problem)
     vrp_solver = AveragePartitionSolver(None)
 
-    print(solver.solve(only_one_const, order_const, capacity_const,
-            vrp_solver, solver_type = 'qbsolv', num_reads = 100))"""
+    solution = solver.solve(only_one_const, order_const, capacity_const,
+            vrp_solver, solver_type = 'qbsolv', num_reads = 1000)
+    print(solution)
 
-
-    problem = VRPProblem(sources, costs, time_costs, capacities, dests, weigths)
-    #solver = FullQuboSolver(problem)
-    solver = AveragePartitionSolver(problem)
+    """problem = VRPProblem(sources, costs, time_costs, capacities, dests, weigths)
+    solver = FullQuboSolver(problem)
+    #solver = AveragePartitionSolver(problem)
 
     result = solver.solve(only_one_const, order_const, capacity_const,
             solver_type = 'qbsolv', num_reads = 100)
     print(result.solution)
-    print(result.total_cost())
+    print(result.total_cost())"""

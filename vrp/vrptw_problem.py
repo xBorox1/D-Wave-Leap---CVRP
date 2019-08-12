@@ -5,8 +5,8 @@ from vrp_problem import VRPProblem
 # VRP problem with multi-source
 class VRPTWProblem(VRPProblem):
 
-    TIME_WINDOW_RADIUS = 10
-    TIME_BLOCK = 10
+    TIME_WINDOW_RADIUS = 60
+    TIME_BLOCK = 30
 
     def __init__(self, sources, costs, time_costs, capacities, dests, weights, time_windows):
         # Merging all sources into one source.
