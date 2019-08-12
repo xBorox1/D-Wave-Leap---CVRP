@@ -169,8 +169,11 @@ class MergingTimeWindowsVRPTWSolver(VRPTWSolver):
             time = time_windows[dest]
             min_time = min(time, min_time)
             max_time = max(time, max_time)
-            if not time in dests_blocks:
-                dests_blocks[time] = list()
+
+        for time in range(min_time, max_time + 1, self.TIME_WINDOWS_DIFF):
+            dests_blocks[time] = list()
+
+        for dest in dests:
             dests_blocks[time].append(dest)
 
         solution = None
