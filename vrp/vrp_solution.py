@@ -38,17 +38,19 @@ class VRPSolution:
     def check(self):
         capacities = self.problem.capacities
         weights = self.problem.weights
+        solution = self.solution
         vehicle_num = 0
 
-        for vehicle_dests in answer:
-            cap = self.capacities[vehicle_num]
+        for vehicle_dests in solution:
+            cap = capacities[vehicle_num]
             for dest in vehicle_dests:
                 cap -= weights[dest]
             if cap < 0: 
                 return False
 
         dests = self.problem.dests
-        answer_dests = [dest for vehicle_dests in answer for dest in vehicle_dests]
+        answer_dests = [dest for vehicle_dests in solution for dest in vehicle_dests]
+        answer_dests = answer_dests[1:-1]
         if len(dests) != len(answer_dests):
             return False
 

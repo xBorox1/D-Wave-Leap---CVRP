@@ -27,6 +27,8 @@ def get_solver(solver_type):
         solver = KerberosSampler()
     if solver_type == 'qbsolv':
         solver = QBSolv()
+    if solver_type == 'exact':
+        solver = ExactSolver()
     return solver
 
 # Solves qubo on qpu.
@@ -40,6 +42,8 @@ def solve_qubo(qubo, solver_type = 'qbsolv', limit = 1, num_reads = 50):
         response = sampler.sample_qubo(qubo.dict, num_reads = num_reads)
     elif solver_type == 'standard':
         response = QBSolv().sample_qubo(qubo.dict, solver = sampler, chain_strength = 800, num_reads = num_reads)
+    elif solver_type == 'exact':
+        response = sampler.sample_qubo(qubo.dict)
     else:
         response = sampler.sample_qubo(qubo.dict, num_reads = num_reads)
     return list(response)[:limit]
