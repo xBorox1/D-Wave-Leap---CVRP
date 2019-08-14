@@ -154,10 +154,18 @@ class VRPProblem:
 
             # First and last destinations.
             if self.first_source:
-                fir_qubo = self.get_first_dest_qubo(start, dests, costs, source)
+                fir_qubo = None
+                if min_size != 0:
+                    fir_qubo = self.get_first_dest_qubo(start, dests, costs, source)
+                else:
+                    fir_qubo = self.get_first_dest_qubo(start, dests_with_source, costs, source)
                 vrp_qubo.merge_with(fir_qubo, 1., order_const)
             if self.last_source:
-                las_qubo = self.get_last_dest_qubo(max_final, dests_with_source, costs, source)
+                las_qubo = None
+                if max_size != min_size:
+                    las_qubo = self.get_last_dest_qubo(max_final, dests_with_source, costs, source)
+                else:
+                    las_qubo = self.get_last_dest_qubo(max_final, dests, costs, source)
                 vrp_qubo.merge_with(las_qubo, 1., order_const)
 
             # Capacity constraints.

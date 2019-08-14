@@ -49,8 +49,7 @@ class VRPSolution:
                 return False
 
         dests = self.problem.dests
-        answer_dests = [dest for vehicle_dests in solution for dest in vehicle_dests]
-        answer_dests = answer_dests[1:-1]
+        answer_dests = [dest for vehicle_dests in solution for dest in vehicle_dests[1:-1]]
         if len(dests) != len(answer_dests):
             return False
 
