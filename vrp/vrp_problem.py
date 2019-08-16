@@ -4,11 +4,11 @@ from itertools import combinations, product
 # VRP problem with multi-source
 class VRPProblem:
 
-    def __init__(self, sources, costs, time_costs, capacities, dests, weights,
+    def __init__(self, sources, costs, time_costs, capacities, dests, weigths,
             first_source = True, last_source = True):
         # Merging all sources into one source.
         source = 0
-        weights[source] = 0
+        weigths[source] = 0
         self.source = source
         in_nearest_sources = dict()
         out_nearest_sources = dict()
@@ -36,7 +36,7 @@ class VRPProblem:
         self.time_costs = time_costs
         self.capacities = capacities
         self.dests = dests
-        self.weights = weights
+        self.weigths = weigths
         self.in_nearest_sources = in_nearest_sources
         self.out_nearest_sources = out_nearest_sources
         self.first_source = first_source
@@ -44,13 +44,13 @@ class VRPProblem:
 
     def get_capacity_qubo(self, capacity, start_step, final_step):
         dests = self.dests
-        weights = self.weights
+        weigths = self.weigths
         cap_qubo = Qubo()
 
         for (d1, d2) in combinations(dests, 2):
             for (s1, s2) in combinations(range(start_step, final_step + 1), 2):
                 index = ((s1, d1), (s2, d2))
-                cost = weights[d1] * weights[d2] / capacity**2
+                cost = weigths[d1] * weigths[d2] / capacity**2
                 cap_qubo.add(index, cost)
 
         return cap_qubo

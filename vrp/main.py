@@ -14,7 +14,7 @@ CAPACITY = 1000
 
 if __name__ == '__main__':
 
-    for i in range(10):
+    for i in range(1):
         TEST = '../tests_vrp/exact/medium/medium-' + str(i) + '.test'
         test = read_test(TEST)
 
@@ -42,10 +42,11 @@ if __name__ == '__main__':
 
         problem = VRPProblem(sources, costs, time_costs, capacities, dests, weigths)
         #solver = FullQuboSolver(problem)
-        solver = AveragePartitionSolver(problem)
+        #solver = AveragePartitionSolver(problem)
+        solver = DBScanSolver(problem)
 
         result = solver.solve(only_one_const, order_const, capacity_const,
-                solver_type = 'qbsolv', num_reads = 500, limit_radius = max(int(len(dests) / 10), 1))
+                solver_type = 'qbsolv')
         print(result.solution)
         print(result.check())
         print(result.total_cost())

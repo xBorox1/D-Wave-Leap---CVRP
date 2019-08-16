@@ -12,7 +12,7 @@ def hybrid_solver():
     workflow = hybrid.LoopUntilNoImprovement(
         hybrid.RacingBranches(
         hybrid.InterruptableTabuSampler(),
-        hybrid.EnergyImpactDecomposer(size=20)
+        hybrid.EnergyImpactDecomposer(size=10)
         | hybrid.QPUSubproblemAutoEmbeddingSampler()
         | hybrid.SplatComposer()) | hybrid.ArgMin(), convergence=3)
     return hybrid.HybridSampler(workflow)
