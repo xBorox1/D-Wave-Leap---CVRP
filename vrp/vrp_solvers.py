@@ -6,6 +6,7 @@ from itertools import product
 import DWaveSolvers
 import networkx as nx
 import numpy as np
+from queue import Queue
 
 # Attributes : VRPProblem
 class VRPSolver:
@@ -55,7 +56,7 @@ class AveragePartitionSolver(VRPSolver):
 
 class DBScanSolver(VRPSolver):
 
-    MAX_DIST = 1000000.
+    MAX_DIST = 10000000.
     MAX_LEN = 10
 
     def _range_query(self, dests, costs, source, radius):
@@ -84,10 +85,12 @@ class DBScanSolver(VRPSolver):
 
             clusters_num += 1
             states[dest] = clusters_num
-            S = set(neighbours)
-            S.remove(dest)
+            q = Queue()
+            for d in neighbours:
+                q.put(d)
 
-            for dest2 in neighbours:
+            while not q.empty():
+                dest2 = q.get()
                 if states[dest2] == -1:
                     states[dest2] = clusters_num
                 if states[dest2] != -2:
@@ -96,7 +99,7 @@ class DBScanSolver(VRPSolver):
                 neighbours = self._range_query(dests, costs, dest2, radius)
                 if len(neighbours) >= min_size:
                     for v in neighbours:
-                        S.add(v)
+                        q.put(v)
 
         clusters = list()
         for i in range(clusters_num + 1):
@@ -110,23 +113,21 @@ class DBScanSolver(VRPSolver):
     def _recursive_dbscan(self, dests, costs, min_radius, max_radius, clusters_num, max_len):
         best_res = [[d for d in dests]]
 
-        while min_radius < max_radius:
+        while len(best_res) != clusters_num and min_radius + 1 < max_radius:
             curr_radius = (min_radius + max_radius) / 2
 
             clusters = self._dbscan(dests, costs, curr_radius, 0)
 
             if len(clusters) < clusters_num:
-                max_radius = curr_radius - 1
+                max_radius = curr_radius
             else:
-                min_radius = curr_radius + 1
-
-            if len(clusters) > len(best_res):
+                min_radius = curr_radius
                 best_res = clusters
 
         for cluster in best_res:
             if len(cluster) > max_len:
                 best_res.remove(cluster)
-                best_res += self._recursive_dbscan(cluster, costs, 0., min_radius, 2, max_len)
+                best_res += self._recursive_dbscan(cluster, costs, 0., self.MAX_DIST, max(clusters_num, 2), max_len)
 
         return best_res
 
@@ -141,7 +142,14 @@ class DBScanSolver(VRPSolver):
         weigths = problem.weigths
         vehicles = len(problem.capacities)
 
-        clusters = self._recursive_dbscan(dests, costs, 0, self.MAX_DIST, 2, self.MAX_LEN)
+        # Some idea
+        #if len(dests) <= self.MAX_LEN:
+        #    solver = AveragePartitionSolver(problem)
+        #    result = solver.solve(only_one_const, order_const, capacity_const,
+        #                        solver_type = solver_type, num_reads = num_reads).solution
+        #    return VRPSolution(problem, None, None, result)
+
+        clusters = self._recursive_dbscan(dests, costs, 0, self.MAX_DIST, vehicles, self.MAX_LEN)
 
         if len(clusters) == vehicles:
             result = list()
@@ -177,7 +185,8 @@ class DBScanSolver(VRPSolver):
                 continue
             id1 = solutions[i].solution[0][-1]
             id2 = solutions[j].solution[0][0]
-            new_costs[i][j] = solutions[j].total_cost() + costs[id1][id2]
+            #new_costs[i][j] = solutions[j].total_cost() + costs[id1][id2]
+            new_costs[i][j] = costs[id1][id2] + (solutions[i].total_cost() + solutions[j].total_cost()) / 2.
             new_time_costs[i][j] = solutions[j].all_time_costs()[0] + time_costs[id1][id2]
 
         for i in range(clusters_num):
@@ -187,7 +196,7 @@ class DBScanSolver(VRPSolver):
         new_problem = VRPProblem(sources, new_costs, new_time_costs, capacities, new_dests, new_weigths)
         solver = DBScanSolver(new_problem)
         compressed_solution = solver.solve(only_one_const, order_const, capacity_const, 
-                            solver_type = solver_type, num_reads = num_reads + 1).solution
+                            solver_type = solver_type, num_reads = num_reads).solution
 
         uncompressed_solution = list()
         for vehicle_dests in compressed_solution:

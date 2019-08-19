@@ -12,9 +12,9 @@ def hybrid_solver():
     workflow = hybrid.LoopUntilNoImprovement(
         hybrid.RacingBranches(
         hybrid.InterruptableTabuSampler(),
-        hybrid.EnergyImpactDecomposer(size=10)
+        hybrid.EnergyImpactDecomposer(size=30, rolling=True, rolling_history=0.15)
         | hybrid.QPUSubproblemAutoEmbeddingSampler()
-        | hybrid.SplatComposer()) | hybrid.ArgMin(), convergence=3)
+        | hybrid.SplatComposer()) | hybrid.ArgMin(), convergence=1)
     return hybrid.HybridSampler(workflow)
 
 def get_solver(solver_type):
