@@ -90,6 +90,18 @@ class VRPSolution:
 
         return result
 
+    def all_weigths(self):
+        weigths = self.problem.weigths
+        result = list()
+
+        for vehicle_dests in self.solution:
+            weight = 0
+            for dest in vehicle_dests:
+                weight += weigths[dest]
+            result.append(weight)
+
+        return result
+
     def description(self):
         costs = self.problem.costs
         time_costs = self.problem.time_costs

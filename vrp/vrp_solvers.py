@@ -58,11 +58,12 @@ class DBScanSolver(VRPSolver):
 
     MAX_DIST = 10000000.
     MAX_LEN = 10
+    MAX_WEIGHT = 1000
 
     def _range_query(self, dests, costs, source, radius):
         result = list()
         for dest in dests:
-            if costs[source][dest] <= radius:
+            if (costs[source][dest] + costs[dest][source]) / 2 <= radius:
                 result.append(dest)
         return result
 
@@ -74,32 +75,41 @@ class DBScanSolver(VRPSolver):
         for d in dests:
             states[d] = -2
 
+        for d in dests:
+            neighbours = self._range_query(dests, costs, d, radius)
+            if len(neighbours) < min_size:
+                states[d] = -1
+
         for dest in dests:
             if states[dest] != -2:
                 continue
 
-            neighbours = self._range_query(dests, costs, dest, radius)
-            if len(neighbours) < min_size:
-                states[dest] = -1
-                continue
-
             clusters_num += 1
-            states[dest] = clusters_num
             q = Queue()
-            for d in neighbours:
-                q.put(d)
+            q.put(dest)
 
             while not q.empty():
                 dest2 = q.get()
-                if states[dest2] == -1:
-                    states[dest2] = clusters_num
-                if states[dest2] != -2:
-                    continue
                 states[dest2] = clusters_num
                 neighbours = self._range_query(dests, costs, dest2, radius)
-                if len(neighbours) >= min_size:
-                    for v in neighbours:
+                for v in neighbours:
+                    if states[v] == -2:
                         q.put(v)
+
+        for dest in dests: 
+            if states[dest] == -1:
+                min_dist = self.MAX_DIST
+                best_neighbour = -1
+                for d in dests:
+                    if states[d] != -1:
+                        if costs[d][dest] < min_dist:
+                            best_neighbour = d
+                            min_dist = costs[d][dest]
+                if best_neighbour == -1:
+                    clusters_num += 1
+                    states[dest] = clusters_num
+                else:
+                    states[dest] = states[best_neighbour]
 
         clusters = list()
         for i in range(clusters_num + 1):
@@ -110,26 +120,143 @@ class DBScanSolver(VRPSolver):
 
         return clusters
 
-    def _recursive_dbscan(self, dests, costs, min_radius, max_radius, clusters_num, max_len):
-        best_res = [[d for d in dests]]
+    def _recursive_dbscan(self, dests, costs, min_radius, max_radius,
+                          clusters_num, max_len, max_weight):
+        best_res = [[d] for d in dests]
 
-        while len(best_res) != clusters_num and min_radius + 1 < max_radius:
-            curr_radius = (min_radius + max_radius) / 2
+        min_r = min_radius
+        max_r = max_radius
+        curr_r = max_r
 
-            clusters = self._dbscan(dests, costs, curr_radius, 0)
+        while min_r + 1 < max_r:
+            curr_r = (min_r + max_r) / 2
+
+            # TODO : min_size parameter
+            clusters = self._dbscan(dests, costs, curr_r, 1)
 
             if len(clusters) < clusters_num:
-                max_radius = curr_radius
+                max_r = curr_r
             else:
-                min_radius = curr_radius
-                best_res = clusters
+                min_r = curr_r
+                if len(clusters) < len(best_res):
+                    best_res = clusters
 
         for cluster in best_res:
-            if len(cluster) > max_len:
+            weight = 0
+            for dest in cluster:
+                weight += self.problem.weigths[dest]
+            if len(cluster) > max_len or weight > max_weight:
                 best_res.remove(cluster)
-                best_res += self._recursive_dbscan(cluster, costs, 0., self.MAX_DIST, max(clusters_num, 2), max_len)
+                # TODO : clusters_num parameter : 2 or clusters_num ?
+                best_res += self._recursive_dbscan(cluster, costs, 0., self.MAX_DIST, 2,
+                                                   max_len, max_weight)
+
+        while len(best_res) > clusters_num:
+            singleton = [0]
+            for cluster in best_res:
+                if len(cluster) == 1:
+                    singleton = cluster
+                    break
+
+            if singleton == [0]:
+                break
+
+            best_res.remove(singleton)
+
+            one = singleton[0]
+            best_cluster = []
+            best_dist = self.MAX_DIST
+
+            for cluster in best_res:
+                if len(cluster) == max_len or cluster == singleton:
+                    continue
+
+                weight = 0
+                min_dist = self.MAX_DIST
+
+                for dest in cluster:
+                    weight += self.problem.weigths[dest]
+                    min_dist = min(min_dist, costs[dest][one])
+                if weight + self.problem.weigths[one] <= max_weight:
+                    if best_dist > min_dist:
+                        best_dist = min_dist
+                        best_cluster = cluster
+
+            if best_cluster == []:
+                best_res.append(singleton)
+                break
+            best_res.remove(best_cluster)
+            best_res.append(best_cluster + singleton)
 
         return best_res
+
+    # My clusterring algorithm which isn't effective.
+    """def _find_set(self, dests, costs, dest, radius):
+        result = list()
+        q = Queue()
+        q.put(dest)
+
+        while not q.empty():
+            d = q.get()
+            if d in result:
+                continue
+            result.append(d)
+            neighbours = self._range_query(dests, costs, d, radius)
+            for n in neighbours:
+                q.put(n)
+
+        return result
+
+    def _best_neighbours(self, dests, costs, dest, cluster_size):
+        min_r = 0.
+        max_r = self.MAX_DIST
+        best_res = [dest]
+
+        while min_r + 1 < max_r:
+            curr_r = (min_r + max_r) / 2
+            cluster = self._find_set(dests, costs, dest, curr_r)
+
+            if len(cluster) <= cluster_size:
+                min_r = curr_r
+                if len(cluster) > len(best_res):
+                    best_res = cluster
+            else:
+                max_r = curr_r
+
+        return best_res
+
+    def _divide_set(self, dests, source, costs, clusters_num):
+        if clusters_num == 1:
+            return [dests]
+
+        clusters_size = int((len(dests) + clusters_num - 1) / clusters_num)
+
+        best_cost = -self.MAX_DIST
+        best_dest = 0
+
+        for (d1, d2) in product(dests, dests):
+            if d1 == d2:
+                continue
+            new_cost = costs[source][d1] - costs[d1][d2] - costs[d2][source]
+            if  new_cost > best_cost:
+                best_cost = new_cost
+                best_dest = d1
+
+        best_neighbours = self._best_neighbours(dests, costs, best_dest, clusters_size)
+        new_dests = dests.copy()
+        for d in best_neighbours:
+            new_dests.remove(d)
+
+        return [best_neighbours] + self._divide_set(new_dests, source, costs, clusters_num - 1)
+
+    def _recursive_divide_set(self, dests, source, costs, clusters_num, max_len):
+        clusters = self._divide_set(dests, source, costs, clusters_num)
+        for cluster in clusters:
+            if len(cluster) > max_len:
+                clusters.remove(cluster)
+                clusters += self._recursive_divide_set(cluster, source, costs,
+                                        int((len(cluster) + max_len - 1) / max_len), max_len)
+        return clusters"""
 
     def solve(self, only_one_const, order_const, capacity_const,
             solver_type = 'qbsolv', num_reads = 50):
@@ -149,7 +276,7 @@ class DBScanSolver(VRPSolver):
         #                        solver_type = solver_type, num_reads = num_reads).solution
         #    return VRPSolution(problem, None, None, result)
 
-        clusters = self._recursive_dbscan(dests, costs, 0, self.MAX_DIST, vehicles, self.MAX_LEN)
+        clusters = self._recursive_dbscan(dests, costs, 0., self.MAX_DIST, vehicles, self.MAX_LEN, capacities[0])
 
         if len(clusters) == vehicles:
             result = list()
@@ -185,8 +312,7 @@ class DBScanSolver(VRPSolver):
                 continue
             id1 = solutions[i].solution[0][-1]
             id2 = solutions[j].solution[0][0]
-            #new_costs[i][j] = solutions[j].total_cost() + costs[id1][id2]
-            new_costs[i][j] = costs[id1][id2] + (solutions[i].total_cost() + solutions[j].total_cost()) / 2.
+            new_costs[i][j] = costs[id1][id2]
             new_time_costs[i][j] = solutions[j].all_time_costs()[0] + time_costs[id1][id2]
 
         for i in range(clusters_num):

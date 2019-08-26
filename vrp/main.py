@@ -14,15 +14,15 @@ CAPACITY = 1000
 
 if __name__ == '__main__':
 
-    for i in range(10):
-        TEST = '../tests_vrp/exact/medium/medium-' + str(i) + '.test'
+    for i in range(1):
+        TEST = '../tests_vrp/exact/big/big-' + str(i) + '.test'
         test = read_test(TEST)
 
         # Problem parameters
         sources = test['sources']
         costs = test['costs']
         time_costs = test['time_costs']
-        capacities = [CAPACITY for i in range(1)]
+        capacities = [90 for _ in range(5)]
         dests = test['dests']
         weigths = test['weights']
         time_windows = test['time_windows']
@@ -46,7 +46,8 @@ if __name__ == '__main__':
         solver = DBScanSolver(problem)
 
         result = solver.solve(only_one_const, order_const, capacity_const,
-                solver_type = 'qbsolv')
+                solver_type = 'qbsolv', num_reads = 500)
         print(result.solution)
         print(result.check())
         print(result.total_cost())
+        print(result.all_weigths())
