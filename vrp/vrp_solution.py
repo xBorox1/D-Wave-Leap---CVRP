@@ -45,6 +45,7 @@ class VRPSolution:
             cap = capacities[vehicle_num]
             for dest in vehicle_dests:
                 cap -= weigths[dest]
+            vehicle_num += 1
             if cap < 0: 
                 return False
 
@@ -66,6 +67,8 @@ class VRPSolution:
         cost = 0
 
         for vehicle_dests in solution:
+            if vehicle_dests == []:
+                continue
             prev = vehicle_dests[0]
             for dest in vehicle_dests[1:]:
                 cost += costs[prev][dest]
@@ -81,6 +84,9 @@ class VRPSolution:
         result = list()
 
         for vehicle_dests in solution:
+            if vehicle_dests == []:
+                result.append(0)
+                continue
             prev = vehicle_dests[0]
             cost = 0
             for dest in vehicle_dests[1:]:

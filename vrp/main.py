@@ -14,7 +14,7 @@ CAPACITY = 1000
 
 if __name__ == '__main__':
 
-    for i in range(1):
+    for i in range(1, 2):
         TEST = '../tests_vrp/exact/big/big-' + str(i) + '.test'
         test = read_test(TEST)
 
@@ -22,12 +22,12 @@ if __name__ == '__main__':
         sources = test['sources']
         costs = test['costs']
         time_costs = test['time_costs']
-        capacities = [90 for _ in range(5)]
+        capacities = [30 for i in range(5)]
         dests = test['dests']
         weigths = test['weights']
         time_windows = test['time_windows']
 
-        only_one_const = 1000000.
+        only_one_const = 10000000.
         order_const = 1.
         capacity_const = 0.
         time_const = 0.

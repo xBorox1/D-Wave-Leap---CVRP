@@ -50,8 +50,10 @@ class VRPProblem:
         for (d1, d2) in combinations(dests, 2):
             for (s1, s2) in combinations(range(start_step, final_step + 1), 2):
                 index = ((s1, d1), (s2, d2))
+                index2 = ((s1, d2), (s2, d1))
                 cost = weigths[d1] * weigths[d2] / capacity**2
                 cap_qubo.add(index, cost)
+                cap_qubo.add(index2, cost)
 
         return cap_qubo
 
@@ -169,7 +171,7 @@ class VRPProblem:
                 vrp_qubo.merge_with(las_qubo, 1., order_const)
 
             # Capacity constraints.
-            if capacity_const != 0:
+            if capacity_const != 0.:
                 capacity = capacities[vehicle]
                 cap_qubo = self.get_capacity_qubo(capacity, start, max_final)
                 vrp_qubo.merge_with(cap_qubo, 1., capacity_const)
