@@ -60,6 +60,10 @@ class DBScanSolver(VRPSolver):
     MAX_LEN = 10
     MAX_WEIGHT = 1000
 
+    def __init__(self, problem, anti_noiser = True):
+        self.problem = problem
+        self.anti_noiser = anti_noiser
+
     def _range_query(self, dests, costs, source, radius):
         result = list()
         for dest in dests:
@@ -151,42 +155,43 @@ class DBScanSolver(VRPSolver):
                 best_res += self._recursive_dbscan(cluster, costs, 0., self.MAX_DIST, 2,
                                                    max_len, max_weight)
 
-        while len(best_res) > clusters_num:
-            singleton = [0]
-            for cluster in best_res:
-                if len(cluster) == 1:
-                    singleton = cluster
+        if self.anti_noiser:
+            while len(best_res) > clusters_num:
+                singleton = [0]
+                for cluster in best_res:
+                    if len(cluster) == 1:
+                        singleton = cluster
+                        break
+
+                if singleton == [0]:
                     break
 
-            if singleton == [0]:
-                break
+                best_res.remove(singleton)
 
-            best_res.remove(singleton)
+                one = singleton[0]
+                best_cluster = []
+                best_dist = self.MAX_DIST
 
-            one = singleton[0]
-            best_cluster = []
-            best_dist = self.MAX_DIST
+                for cluster in best_res:
+                    if len(cluster) == max_len or cluster == singleton:
+                        continue
 
-            for cluster in best_res:
-                if len(cluster) == max_len or cluster == singleton:
-                    continue
+                    weight = 0
+                    min_dist = self.MAX_DIST
 
-                weight = 0
-                min_dist = self.MAX_DIST
+                    for dest in cluster:
+                        weight += self.problem.weigths[dest]
+                        min_dist = min(min_dist, costs[dest][one])
+                    if weight + self.problem.weigths[one] <= max_weight:
+                        if best_dist > min_dist:
+                            best_dist = min_dist
+                            best_cluster = cluster
 
-                for dest in cluster:
-                    weight += self.problem.weigths[dest]
-                    min_dist = min(min_dist, costs[dest][one])
-                if weight + self.problem.weigths[one] <= max_weight:
-                    if best_dist > min_dist:
-                        best_dist = min_dist
-                        best_cluster = cluster
-
-            if best_cluster == []:
-                best_res.append(singleton)
-                break
-            best_res.remove(best_cluster)
-            best_res.append(best_cluster + singleton)
+                if best_cluster == []:
+                    best_res.append(singleton)
+                    break
+                best_res.remove(best_cluster)
+                best_res.append(best_cluster + singleton)
 
         return best_res
 
@@ -332,3 +337,113 @@ class DBScanSolver(VRPSolver):
             uncompressed_solution.append(uncompressed)
 
         return VRPSolution(problem, None, None, uncompressed_solution)
+
+class SolutionPartitioningSolver(VRPSolver):
+
+    INF = 1000000000
+
+    def __init__(self, problem, solver):
+        self.problem = problem
+        self.solver = solver
+    
+    def _divide_solution_greedy(self, solution):
+        solution = solution[1:-1]
+        problem = self.problem
+        capacities = problem.capacities
+        costs = problem.costs
+        weights = problem.weigths
+
+        new_solution = []
+        pointer = 0
+        dests = len(solution)
+
+        for cap in reversed(capacities):
+            actual_cap = cap
+            sub_dests = []
+            if pointer != dests:
+                sub_dests = [0]
+            while pointer < dests and actual_cap >= weights[solution[pointer]]:
+                actual_cap -= weights[solution[pointer]]
+                sub_dests.append(solution[pointer])
+                pointer += 1
+            if len(sub_dests) > 0:
+                sub_dests.append(0)
+            new_solution.append(sub_dests)
+
+        new_solution.reverse()
+        return VRPSolution(problem, None, None, new_solution)
+
+    def _divide_solution_greedy_dp(self, solution):
+        problem = self.problem
+        capacities = problem.capacities
+        costs = problem.costs
+        weights = problem.weigths
+
+        dests = len(solution)
+        vehicles = len(capacities)
+        div_costs = np.zeros(dests)
+        for i in range(1, dests - 1):
+            d1 = solution[i]
+            d2 = solution[i+1]
+            div_costs[i] = costs[d1][0] + costs[0][d2] - costs[d1][d2]
+
+        dp = np.zeros((dests, vehicles + 1), dtype=float)
+        prev_state = np.zeros((dests, vehicles + 1), dtype=int)
+
+        for i in range(dests):
+            if i != 0:
+                dp[i][0] = self.INF
+            for j in range(1, vehicles + 1):
+                cap = capacities[j-1]
+                pointer = i
+                dp[i][j] = dp[i][j-1]
+                prev_state[i][j] = i
+                while pointer > 0 and cap > weights[solution[pointer]]:
+                    pointer -= 1
+                    new_cost = div_costs[pointer] + dp[pointer][j-1]
+                    if new_cost < dp[i][j]:
+                        dp[i][j] = new_cost
+                        prev_state[i][j] = pointer
+                    cap -= weights[solution[pointer + 1]]
+
+        new_solution = []
+        pointer = dests - 1
+        for j in reversed(range(1, vehicles + 1)):
+            prev = prev_state[pointer][j]
+            if prev != pointer:
+                lis = solution[(prev + 1):(pointer + 1)]
+                if prev != -1:
+                    lis = [0] + lis
+                if pointer != dests - 1:
+                    lis = lis + [0]
+                new_solution.append(lis)
+            else:
+                new_solution.append([])
+            pointer = prev
+        
+        new_solution.reverse()
+        return VRPSolution(problem, None, None, new_solution)
+
+    def solve(self, only_one_const, order_const, capacity_const,
+            solver_type = 'qbsolv', num_reads = 50):
+        problem = self.problem
+        capacity = 0
+        weights = problem.weigths
+        for w in weights:
+            capacity += w
+
+        # Creating new problem with one vehicle
+        sources = [0]
+        dests = problem.dests
+        costs = problem.costs
+        time_costs = problem.time_costs
+        new_capacities = [capacity]
+        new_problem = VRPProblem(sources, costs, time_costs, new_capacities, dests, weights)
+
+        solver = self.solver
+        solver.set_problem(new_problem)
+        solution = solver.solve(only_one_const, order_const, capacity_const,
+            solver_type = 'qbsolv', num_reads = 50)
+
+        sol = solution.solution[0]
+        return self._divide_solution_greedy_dp(sol)
