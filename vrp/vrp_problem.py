@@ -4,11 +4,11 @@ from itertools import combinations, product
 # VRP problem with multi-source
 class VRPProblem:
 
-    def __init__(self, sources, costs, time_costs, capacities, dests, weigths,
+    def __init__(self, sources, costs, time_costs, capacities, dests, weights,
             first_source = True, last_source = True):
         # Merging all sources into one source.
         source = 0
-        weigths[source] = 0
+        weights[source] = 0
         self.source = source
         in_nearest_sources = dict()
         out_nearest_sources = dict()
@@ -26,8 +26,8 @@ class VRPProblem:
                     out_nearest = s
             costs[source][dest] = costs[in_nearest][dest]
             costs[dest][source] = costs[dest][out_nearest]
-            time_costs[source][dest] = costs[in_nearest][dest]
-            time_costs[dest][source] = costs[dest][out_nearest]
+            time_costs[source][dest] = time_costs[in_nearest][dest]
+            time_costs[dest][source] = time_costs[dest][out_nearest]
             in_nearest_sources[dest] = in_nearest
             out_nearest_sources[dest] = out_nearest
         time_costs[source][source] = 0
@@ -36,7 +36,7 @@ class VRPProblem:
         self.time_costs = time_costs
         self.capacities = capacities
         self.dests = dests
-        self.weigths = weigths
+        self.weights = weights
         self.in_nearest_sources = in_nearest_sources
         self.out_nearest_sources = out_nearest_sources
         self.first_source = first_source
@@ -44,14 +44,14 @@ class VRPProblem:
 
     def get_capacity_qubo(self, capacity, start_step, final_step):
         dests = self.dests
-        weigths = self.weigths
+        weights = self.weights
         cap_qubo = Qubo()
 
         for (d1, d2) in combinations(dests, 2):
             for (s1, s2) in combinations(range(start_step, final_step + 1), 2):
                 index = ((s1, d1), (s2, d2))
                 index2 = ((s1, d2), (s2, d1))
-                cost = weigths[d1] * weigths[d2] / capacity**2
+                cost = weights[d1] * weights[d2] / capacity**2
                 cap_qubo.add(index, cost)
                 cap_qubo.add(index2, cost)
 

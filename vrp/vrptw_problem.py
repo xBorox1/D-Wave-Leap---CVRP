@@ -29,8 +29,8 @@ class VRPTWProblem(VRPProblem):
                     out_nearest = s
             costs[source][dest] = costs[in_nearest][dest]
             costs[dest][source] = costs[dest][out_nearest]
-            time_costs[source][dest] = costs[in_nearest][dest]
-            time_costs[dest][source] = costs[dest][out_nearest]
+            time_costs[source][dest] = time_costs[in_nearest][dest]
+            time_costs[dest][source] = time_costs[dest][out_nearest]
             in_nearest_sources[dest] = in_nearest
             out_nearest_sources[dest] = out_nearest
         time_costs[source][source] = 0

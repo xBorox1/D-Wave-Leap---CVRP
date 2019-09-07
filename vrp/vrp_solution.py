@@ -37,14 +37,14 @@ class VRPSolution:
     # Checks capacity and visiting.
     def check(self):
         capacities = self.problem.capacities
-        weigths = self.problem.weigths
+        weights = self.problem.weights
         solution = self.solution
         vehicle_num = 0
 
         for vehicle_dests in solution:
             cap = capacities[vehicle_num]
             for dest in vehicle_dests:
-                cap -= weigths[dest]
+                cap -= weights[dest]
             vehicle_num += 1
             if cap < 0: 
                 return False
@@ -96,14 +96,14 @@ class VRPSolution:
 
         return result
 
-    def all_weigths(self):
-        weigths = self.problem.weigths
+    def all_weights(self):
+        weights = self.problem.weights
         result = list()
 
         for vehicle_dests in self.solution:
             weight = 0
             for dest in vehicle_dests:
-                weight += weigths[dest]
+                weight += weights[dest]
             result.append(weight)
 
         return result

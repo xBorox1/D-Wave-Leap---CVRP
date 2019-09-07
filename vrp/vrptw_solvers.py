@@ -2,6 +2,7 @@ from qubo_helper import Qubo
 from tsp_problem import TSPProblem 
 from vrp_problem import VRPProblem
 from vrp_solution import VRPSolution
+from vrptw_solution import VRPTWSolution
 from itertools import product
 from scipy.optimize import linear_sum_assignment
 import DWaveSolvers
@@ -25,10 +26,54 @@ class MergingTimeWindowsVRPTWSolver(VRPTWSolver):
 
     INF = 1000000000
 
-    def __init__(self, problem):
+    def __init__(self, problem, solver):
         self.problem = problem
+        self.solver = solver
+        inf_num = len(problem.weights)
+        self.inf_num = inf_num
 
-    def _merge_one(self, first_sample, second_sample, time):
+    def _check_time(self, dest, time):
+        time_window = self.problem.time_windows[dest]
+        max_time = time_window + self.TIME_WINDOW_RADIUS
+        return time <= max_time
+
+    # Small function for waiting simulating.
+    def _minimum_time(self, dest, time):
+        time_window = self.problem.time_windows[dest]
+        min_time = time_window - self.TIME_WINDOW_RADIUS
+        return max(time, min_time)
+
+    def _check_time_windows(self, solution):
+        time_costs = self.problem.time_costs
+
+        time = 0
+        prev = 0
+        for dest in solution:
+            if dest == 0:
+                continue
+            if prev != 0:
+                time += time_costs[prev][dest]
+            if not self._check_time(dest, time):
+                return False
+            else:
+                time = self._minimum_time(dest, time)
+            prev = dest
+
+        return True
+
+    def _merge_one(self, first_sample, second_sample, time, capacity):
+        # Checking capacity constraint.
+        weight = 0
+        weights = self.problem.weights
+        for dest in first_sample:
+            weight += weights[dest]
+        for dest in second_sample:
+            weight += weights[dest]
+
+        if weight > capacity:
+            return []
+
+        # Checking if first_sample is empty.
         if len(first_sample) == 0:
             return second_sample
 
@@ -120,47 +165,55 @@ class MergingTimeWindowsVRPTWSolver(VRPTWSolver):
         dp_result = list(reversed(dp_result))
         result = result + dp_result
 
+        # Checking time constraint.
+        if not self._check_time_windows(result):
+            return []
+
         return result
 
 
     def _merge_all(self, first_solution, second_solution, time):
+
         if first_solution == None:
             return second_solution
 
-        """result = list()
-        for i in range(len(first_solution)):
-            result.append(self._merge_one(first_solution[i], second_solution[i], time))
-
-        return result"""
+        capacities = self.problem.capacities
 
         # Finding best matching.
         size = len(first_solution)
         matching_costs = np.zeros((size, size), dtype=int)
         for (i, j) in product(range(size), range(size)):
-            merging = self._merge_one(first_solution[i], second_solution[j], time)
-            weight = VRPSolution(self.problem, None, None, 
-                    solution = [merging]).total_cost()
+            merging = self._merge_one(first_solution[i], second_solution[j], time, capacities[i])
+            weight = 0
+            if merging == []:
+                weight = self.INF
+            else:
+                weight = VRPSolution(self.problem, None, None, solution = [merging]).total_cost()
             matching_costs[i][j] = weight
 
         row_matching, col_matching = linear_sum_assignment(matching_costs)
         mates = np.zeros((size), dtype=int)
         for i in range(size):
-            mates[col_matching[i]] = i
+            mates[i] = col_matching[i]
 
         result = list()
         for i in range(size):
-            mate = row_matching[mates[i]]
-            merging = self._merge_one(first_solution[i], second_solution[mate], time)
+            mate = mates[i]
+            merging = self._merge_one(first_solution[i], second_solution[mate], time, capacities[i])
             result.append(merging)
 
         return result
 
     def solve(self, only_one_const, order_const, capacity_const,
-            vrp_solver, solver_type = 'qbsolv', num_reads = 50):
+            solver_type = 'qbsolv', num_reads = 50):
         problem = self.problem
+        vrp_solver = self.solver
         time_windows = problem.time_windows
+        time_costs = problem.time_costs
         dests = problem.dests
         dests_blocks = dict()
+        weights = problem.weights
+        original_capacities = problem.capacities.copy()
 
         min_time = self.INF
         max_time = 0
@@ -178,6 +231,19 @@ class MergingTimeWindowsVRPTWSolver(VRPTWSolver):
 
         solution = None
         for time in range(min_time, max_time + 1, self.TIME_WINDOWS_DIFF):
+            
+            # Counting time limits.
+            time_limits = [time + self.TIME_WINDOW_RADIUS for _ in range(len(original_capacities))]
+            if solution != None:
+                it = 0
+                for sol in solution:
+                    prev = sol[0]
+                    for dest in sol:
+                        time_limits[it] -= time_costs[prev][dest]
+                        prev = dest
+                    it += 1
+            time_limits = [min(2. * self.TIME_WINDOW_RADIUS, t) for t in time_limits]
+
             dests = dests_blocks[time]
 
             first_source = (time == min_time)
@@ -187,8 +253,33 @@ class MergingTimeWindowsVRPTWSolver(VRPTWSolver):
                     problem.capacities, dests, problem.weights, first_source = first_source, 
                     last_source = last_source)
             vrp_solver.set_problem(vrp_problem)
-            next_solution = vrp_solver.solve(only_one_const, order_const, capacity_const,
-                        solver_type = solver_type, num_reads = num_reads).solution
+            vrp_solver.time_limits = time_limits
+
+            next_sol = vrp_solver.solve(only_one_const, order_const, capacity_const,
+                        solver_type = solver_type, num_reads = num_reads)
+            next_solution = next_sol.solution
+
+            if time != min_time:
+                next_solution = [sol[1:] for sol in next_solution]
+
+            if time != max_time:
+                next_solution = [sol[:-1] for sol in next_solution]
+
+            if time == min_time or time == max_time:
+                next_solution = [sol if sol != [] else [0] for sol in next_solution]
+
+            problem.capacities = original_capacities.copy()
             solution = self._merge_all(solution, next_solution, time - self.TIME_WINDOW_RADIUS)
 
-        return solution
+            # Changing capacities.
+            it = 0
+            for sol in solution:
+                cap = original_capacities[it]
+                for dest in sol:
+                    cap -= weights[dest]
+                problem.capacities[it] = cap
+                it += 1
+ 
+        solution = [sol if sol != [0, 0] else [] for sol in solution]
+        problem.capacities = original_capacities
+        return VRPTWSolution(problem, None, None, solution)
