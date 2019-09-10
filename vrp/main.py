@@ -14,15 +14,15 @@ CAPACITY = 1000
 
 if __name__ == '__main__':
 
-    for i in range(10):
-        TEST = '../tests_vrp/exact/medium/medium-' + str(i) + '.test'
+    for i in range(1, 2):
+        TEST = '../tests_vrp/exact/big/big-' + str(i) + '.test'
         test = read_test(TEST)
 
         # Problem parameters
         sources = test['sources']
         costs = test['costs']
         time_costs = test['time_costs']
-        capacities = [50 for _ in range(3)]
+        capacities = [20, 40, 80]
         dests = test['dests']
         weigths = test['weights']
         time_windows = test['time_windows']

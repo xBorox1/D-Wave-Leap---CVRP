@@ -416,7 +416,7 @@ class SolutionPartitioningSolver(VRPSolver):
         solver = self.solver
         solver.set_problem(new_problem)
         solution = solver.solve(only_one_const, order_const, capacity_const,
-            solver_type = 'qbsolv', num_reads = 50)
+            solver_type = solver_type, num_reads = num_reads)
 
         sol = solution.solution[0]
         return self._divide_solution_random(sol)

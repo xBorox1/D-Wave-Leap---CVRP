@@ -9,10 +9,10 @@ import neal
 
 # Creates hybrid solver.
 def hybrid_solver():
-    workflow = hybrid.LoopUntilNoImprovement(
+    workflow = hybrid.Loop(
         hybrid.RacingBranches(
         hybrid.InterruptableTabuSampler(),
-        hybrid.EnergyImpactDecomposer(size=30, rolling=True, rolling_history=0.15)
+        hybrid.EnergyImpactDecomposer(size=30, rolling=True, rolling_history=0.75)
         | hybrid.QPUSubproblemAutoEmbeddingSampler()
         | hybrid.SplatComposer()) | hybrid.ArgMin(), convergence=1)
     return hybrid.HybridSampler(workflow)
