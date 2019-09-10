@@ -10,8 +10,8 @@ import numpy as np
 # edges.csv: id_1|id_2|distance|time_0|time_1|...|time_23
 # TODO: lokalizacje magazynów, paczkomatów itp
 
-GRAPH_PATH = '../tests/bruxelles'
-TIME_WINDOWS_DIFF = 30
+GRAPH_PATH = '../bruxelles'
+TIME_WINDOWS_DIFF = 1
 TIME_WINDOWS_RADIUS = 60
 DIST_TO_TIME = float(1) / float(444)
 
@@ -61,21 +61,31 @@ def read_full_test(path, graph_path = GRAPH_PATH):
         time_windows[i + magazines_num] = time_window
         weights[i + magazines_num] = weight
 
+    next(in_file)
+    vehicles = int(in_file.readline())
+    capacities = np.zeros((vehicles), dtype=int)
+
+    for i in range(vehicles):
+        line = in_file.readline().split()
+        capacities[i] = int(line[1])
+
     # Creating costs and time_costs matrix.
     costs = np.zeros((nodes_num, nodes_num), dtype=float)
     time_costs = np.zeros((nodes_num, nodes_num), dtype=float)
 
-    for i, j in product(range(nodes_num), range(nodes_num)):
-        d1 = nodes_id[i]
-        d2 = nodes_id[j]
-        path = nx.shortest_path(graph, source = d1, target = d2, weight = 'distance')
+    for i in range(nodes_num):
+        source = nodes_id[i]
+        _, paths = nx.single_source_dijkstra(graph, source, weight = 'distance')
+        for j in range(nodes_num):
+            d = nodes_id[j]
+            path = paths[d]
         
-        prev = d1
-        for node in path[1:]:
-            edge = graph.get_edge_data(prev, node)
-            costs[i][j] += edge['distance']
-            time_costs[i][j] += edge['time']
-            prev = node
+            prev = source
+            for node in path[1:]:
+                edge = graph.get_edge_data(prev, node)
+                costs[i][j] += edge['distance']
+                time_costs[i][j] += edge['time']
+                prev = node
 
     result = dict()
     result['sources'] = [i for i in range(magazines_num)]
@@ -84,6 +94,7 @@ def read_full_test(path, graph_path = GRAPH_PATH):
     result['time_costs'] = time_costs
     result['weights'] = weights
     result['time_windows'] = time_windows
+    result['capacities'] = capacities
 
     in_file.close()
     return result
@@ -120,6 +131,13 @@ def read_test(path):
         costs[i][j] = float(cost_line[0])
         time_costs[i][j] += float(cost_line[1])
 
+    vehicles = int(in_file.readline())
+    capacities = np.zeros((vehicles), dtype=int)
+
+    for i in range(vehicles):
+        line = in_file.readline()
+        capacities[i] = int(line)
+
     result = dict()
     result['sources'] = [i for i in range(magazines_num)]
     result['dests'] =  [i for i in range(magazines_num, nodes_num)]
@@ -127,6 +145,7 @@ def read_test(path):
     result['time_costs'] = time_costs
     result['weights'] = weights
     result['time_windows'] = time_windows
+    result['capacities'] = capacities
 
     in_file.close()
     return result
@@ -153,5 +172,11 @@ def create_test(in_path, out_path):
     # Costs and time_costs between all sources and destinations.
     for (i, j) in product(range(n), range(n)):
         out_file.write(str(costs[i][j]) + ' ' + str(time_costs[i][j]) + '\n')
+
+    capacities = test['capacities']
+    vehicles = len(capacities)
+    out_file.write(str(vehicles) + '\n')
+    for i in range(vehicles):
+        out_file.write(str(capacities[i]) + '\n')
 
     out_file.close()

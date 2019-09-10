@@ -13,7 +13,7 @@ class VRPTWSolver:
 
     TIME_WINDOW_RADIUS = 60
     TIME_BLOCK = 30
-    TIME_WINDOWS_DIFF = 30
+    TIME_WINDOWS_DIFF = 1
 
     def __init__(self, problem):
         self.problem = problem
@@ -231,20 +231,24 @@ class MergingTimeWindowsVRPTWSolver(VRPTWSolver):
 
         solution = None
         for time in range(min_time, max_time + 1, self.TIME_WINDOWS_DIFF):
+            dests = dests_blocks[time]
+
+            if dests == []:
+                continue
             
             # Counting time limits.
             time_limits = [time + self.TIME_WINDOW_RADIUS for _ in range(len(original_capacities))]
             if solution != None:
                 it = 0
                 for sol in solution:
+                    if sol == []:
+                        continue
                     prev = sol[0]
                     for dest in sol:
                         time_limits[it] -= time_costs[prev][dest]
                         prev = dest
                     it += 1
             time_limits = [min(2. * self.TIME_WINDOW_RADIUS, t) for t in time_limits]
-
-            dests = dests_blocks[time]
 
             first_source = (time == min_time)
             last_source = (time == max_time)
@@ -257,6 +261,8 @@ class MergingTimeWindowsVRPTWSolver(VRPTWSolver):
 
             next_sol = vrp_solver.solve(only_one_const, order_const, capacity_const,
                         solver_type = solver_type, num_reads = num_reads)
+            if next_sol == None:
+                return None
             next_solution = next_sol.solution
 
             if time != min_time:

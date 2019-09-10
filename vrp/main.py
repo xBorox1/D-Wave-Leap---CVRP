@@ -13,16 +13,17 @@ from input import *
 CAPACITY = 1000
 
 if __name__ == '__main__':
-
-    for i in range(1, 2):
-        TEST = '../tests_vrp/exact/big/big-' + str(i) + '.test'
+    for t in ['quantum1-1', 'quantum1-2', 'clustered1-1', 'clustered1-2', 'group1-1', 'group1-2', 'group2-1', 'group2-2', 'group3-1', 'group3-2', 'group4-1', 'group4-2', 'group5-1', 'group5-2', 'group6-1', 'group6-2', 'medium1-1', 'medium1-2', 'quantum1_75-1', 'quantum1_75-2', 'quantum1_100-1', 'quantum1_100-2', 'quantum1_150-1', 'quantum1_150-2', 'quantum1_200-1', 'quantum1_200-2']:
+        print("Test : ", t)
+        TEST = '../tests_cvrptw/exact/' + t + '.test'
+        #OUT = '../tests_cvrptw/exact/' + t + '.test'
         test = read_test(TEST)
 
         # Problem parameters
         sources = test['sources']
         costs = test['costs']
         time_costs = test['time_costs']
-        capacities = [20, 40, 80]
+        capacities = test['capacities']
         dests = test['dests']
         weigths = test['weights']
         time_windows = test['time_windows']
@@ -39,6 +40,11 @@ if __name__ == '__main__':
 
         result = solver.solve(only_one_const, order_const, capacity_const,
                 solver_type = 'qbsolv', num_reads = 500)
+
+        if result == None:
+            print("Niestety coś poszło nie tak :(")
+            continue
+
         print(result.solution)
         print(result.check())
         print(result.total_cost())
