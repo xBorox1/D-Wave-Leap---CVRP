@@ -5,7 +5,7 @@ Few quantum approaches for CVRPTW problems.
 ## API Usage
 
 * Prepare test scenario according to Input specification.
-* Read the test by function read_test
+* Read the test by function read_full_test or read_test.
 
 ## Input specification
 
