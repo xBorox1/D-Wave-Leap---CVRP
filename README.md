@@ -12,5 +12,5 @@ Few quantum approaches for CVRPTW problems.
 You need to prepare 2 files :
 
 * Graph file in simple csv format, named vertex_weights.csv, containing 3 columns as edges: id of first vertes, id of second vertex and weight of edge. Graph is directed.
-* Scenario text file with information about magazines, vehicles and deliveries. 
+* Scenario text file. Format is described i 'example_scenario'.
 
