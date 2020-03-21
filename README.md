@@ -1,6 +1,6 @@
 # CVRP approach using quantum computing
 
-Few quantum approaches for CVRPTW problems.
+Few quantum approaches for CVRPTW problems. It isn't fully ended version and it's not user friendly.
 
 ## API Usage
 
@@ -18,4 +18,12 @@ You need to prepare 2 files :
 
 * Choose a solver.
 * Read test by read_test function or read_full_test from input.py
-* Run solve function from solver.
+* Run solve function from solver in same way as in main.
+
+
+## Availbale solvers :
+
+* FullQuboSolver - solving VRP problem only by quantum annealing, working for small cases
+* AveragePartitionSolver - improved version of previous one, but using only qunatum annealing, working for small cases and only for VRP
+* DBScanSolver - hybrid algorithm for VRP and CVRP with equal capacities, working for bigger cases
+* SolutionPartitioningSolver - hybrid algorithm for CVRP, working for cases with 200 deliveries if used with DBScanSolver. (as parameter - example in main)
