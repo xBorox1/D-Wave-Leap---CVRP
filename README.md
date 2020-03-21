@@ -21,7 +21,7 @@ You need to prepare 2 files :
 * Run solve function from solver in same way as in main.
 
 
-## Availbale solvers :
+## Available solvers :
 
 * FullQuboSolver - solving VRP problem only by quantum annealing, working for small cases
 * AveragePartitionSolver - improved version of previous one, but using only qunatum annealing, working for small cases and only for VRP
