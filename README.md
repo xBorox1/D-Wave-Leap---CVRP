@@ -1,6 +1,6 @@
 # CVRP approach using quantum computing
 
-Few quantum approaches for CVRPTW problems. It isn't fully ended version and it's not well described. If you want to use it, I recommend you to change only file paths in main. 
+Few quantum approaches for CVRPTW problems. It isn't fully ended version and it's not well described. If you want to use it, I recommend you to change only file paths in main. I want to improve code and approaches and then create more user-friendly version.
 
 ## API Usage
 
