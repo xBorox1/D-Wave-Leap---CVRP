@@ -1,6 +1,6 @@
 # CVRP approach using quantum computing
 
-Few quantum approaches for CVRPTW problems. It isn't fully ended version and it's not well described. If you want to use it, I recommend you to change only file paths in main. I want to improve code and approaches and then create more user-friendly version. Also you need to configure D-Wave Leap first.
+Few quantum approaches for CVRP problems. It isn't fully ended version and it's not well described. If you want to use it, I recommend you to change only file paths in main. I want to improve code and approaches and then create more user-friendly version. Also you need to configure D-Wave Leap first.
 
 ## API Usage
 
@@ -17,9 +17,8 @@ You need to prepare 2 files :
 ## Running
 
 * Choose a solver.
-* Read test by read_test function or read_full_test from input.py
+* Read test by read_test function or read_full_test from input.py.
 * Run solve function from solver in same way as in main.
-
 
 ## Available solvers :
 
